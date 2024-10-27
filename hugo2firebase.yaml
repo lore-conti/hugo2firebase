@@ -1,0 +1,40 @@
+name: Deploy Hugo site to Firebase
+
+on:
+  push:
+    branches:
+      - main  # Deploy on push to the main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository with submodules
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true  # Automatically initializes and updates submodules
+
+    # Install the latest Hugo Extended version
+    - name: Install latest Hugo Extended
+      run: |
+        HUGO_VERSION=$(curl -s https://api.github.com/repos/gohugoio/hugo/releases/latest | grep -Po '"tag_name": "\K[^\"]+')
+        wget https://github.com/gohugoio/hugo/releases/download/${HUGO_VERSION}/hugo_extended_${HUGO_VERSION#v}_Linux-64bit.tar.gz
+        tar -xzvf hugo_extended_${HUGO_VERSION#v}_Linux-64bit.tar.gz
+        sudo mv hugo /usr/local/bin/
+        rm hugo_extended_${HUGO_VERSION#v}_Linux-64bit.tar.gz
+
+    # Install Firebase CLI
+    - name: Install Firebase CLI
+      run: curl -sL https://firebase.tools | bash
+
+    # Build the Hugo site
+    - name: Build Hugo site
+      run: hugo
+
+    # Deploy to Firebase Hosting
+    - name: Deploy to Firebase Hosting
+      env:
+        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      run: firebase deploy --only hosting
